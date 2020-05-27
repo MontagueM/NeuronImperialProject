@@ -2,7 +2,6 @@ import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from scipy.special import exprel
-from math import floor
 
 
 class Neuron:
@@ -62,9 +61,9 @@ class Neuron:
         return [dndt, dmdt, dhdt, dvdt]
 
     def run(self, time_length, current_start):
-        new_start_time = int(floor(self.tarr[-1]))
+        new_start_time = int(np.floor(self.tarr[-1]))
         print(new_start_time)
-        time_region = np.linspace(new_start_time, time_length, 1000).tolist()
+        time_region = np.linspace(new_start_time, new_start_time + time_length, 1000).tolist()
         self.varr = [self.v]
         self.tarr = [time_region[0]]
         self.I = current_start
@@ -82,7 +81,7 @@ class Neuron:
 neuron = Neuron()
 time_sets = [np.linspace(0, 50, 1000).tolist(), np.linspace(50, 53, 1000).tolist(), np.linspace(53, 100, 1000).tolist()]
 run1, tarr1 = neuron.run(50, 0)
-run2, tarr2 = neuron.run(53, 1)
-run3, tarr3 = neuron.run(100, 0)
+run2, tarr2 = neuron.run(3, 1)
+run3, tarr3 = neuron.run(50, 0)
 
 neuron.plot_graph(tarr1 + tarr2 + tarr3, [x - 70 for x in run1 + run2 + run3])
