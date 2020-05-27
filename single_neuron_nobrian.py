@@ -3,7 +3,6 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from scipy.special import exprel
 
-
 class Neuron:
     def __init__(self):
         # Our constants for the diff. equations
