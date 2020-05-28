@@ -3,36 +3,88 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from scipy.special import exprel
 
+"""
+I've duplicated this file called "neuron.py" to facilitate the actual model. nobrian_singleneuron.py will stay
+as an archival piece for modelling just a single neuron without brian.
+"""
 
-def f_betah(v):
-    return 1 / (np.exp((-v + 30) / 10) + 1)
+#####################################################################
+
+# Definitions of the required variables with respect to voltage. Numbers taken from paper below.
+# https://neuronaldynamics.epfl.ch/online/Ch2.S2.html
 
 
 def f_alphan(v):
-    return 0.01 * 10 / exprel((-v + 10) / 10)
-
-
-def f_alpham(v):
-    return 0.1 * 10 / exprel((-v + 25) / 10)
-
-
-def f_alphah(v):
-    return 0.07 * np.exp(-v / 20)
+    return 0.01 * (v + 55) / (1 - (np.exp(-(v + 55) / 10)))
 
 
 def f_betan(v):
-    return 0.125 * np.exp(-v / 80)
+    return 0.125 * np.exp(-(v + 65) / 80)
+
+
+def f_alpham(v):
+    return 0.1 * (v + 40) / (1 - (np.exp(-(v + 40) / 10)))
 
 
 def f_betam(v):
-    return 4 * np.exp(-v / 18)
+    return 4 * np.exp(-(v + 65) / 18)
+
+
+def f_alphah(v):
+    return 0.07 * np.exp(-(v + 65) / 20)
+
+
+def f_betah(v):
+    return 1 / (1 + np.exp(-(v + 35) / 10))
+
+#####################################################################
+
+# Dealing with plotting the neuron
+
+
+def remove_duplicates(time_points, array):
+    """
+    Since the algorithm produces duplicate results for some of the data, this removes duplicates for speed of computation
+    (in case a higher complexity calculation must be done) and visual appeal on a graph.
+
+    :return: the arrays with zero duplicates
+    """
+    print("Removing duplicates")
+
+    # removed duplicates
+    rd_time_points = []
+    rd_array = []
+
+    num = 0
+    for i in range(len(time_points)):
+        if time_points[i] not in rd_time_points:
+            rd_time_points.append(time_points[i])
+            rd_array.append(array[i])
+        else:
+            num += 1
+
+    print(f"Removed {num} duplicates")
+    return rd_time_points, rd_array
 
 
 def plot_graph(time_points, array):
-    plt.plot(time_points, array, 'b', linewidth=1.5)
+    """
+    Plots the graph of the given data for an single neuron.
+
+    :param time_points: the time points to plot along x-axis
+    :param array: voltage array to plot along y-axis
+    """
+    # Removes any duplicates we have generated in the sample to provide a clearer-looking graph
+    time_points, array = remove_duplicates(time_points, array)
+
+    # Fix overlaps in graph? could just delete overlapping ones (using set)
+    plt.plot(time_points, array, 'b', linewidth=1)
     plt.xlabel('Time (ms)')
     plt.ylabel('Action potential (mV)')
+    #plt.yticks(np.arange(-80, 35, 5))
     plt.show()
+
+#####################################################################
 
 
 class Neuron:
@@ -54,20 +106,20 @@ class Neuron:
         Runs the differential equation solver over a specified time period in ms with a specified constant current.
     """
     # Our constants for the diff. equations
-    EL = 10.613
-    ENa = 115
-    EK = -12
+    EL = -54.4
+    ENa = 50
+    EK = -70
     gL = 0.3
     gNa = 120
     gK = 36
 
     # Initial conditions
-    v = 0
-    h = 1
+    v = -65
+    h = 0
     m = 0
-    n = .5
+    n = 0.5
     C = 1e-6
-    R = 35.4
+    #R = 35.4
     voltages = []
     timestamps = [0]
     I = 0
@@ -84,7 +136,7 @@ class Neuron:
 
     def f(self, init, t):
         """
-        The main function we are integrating over with odeint. odeint solvs the four FODEs below, solving them
+        The main function we are integrating over with odeint. odeint solvs the four DEs below, solving them
         and then those results being used for the next solutions (n, m, h, v)
 
         :param init: an array of the four initial conditions for n, m, h, and v
@@ -100,7 +152,8 @@ class Neuron:
         dndt = f_alphan(self.v) * (1 - self.n) - f_betan(self.v) * self.n
         dmdt = f_alpham(self.v) * (1 - self.m) - f_betam(self.v) * self.m
         dhdt = f_alphah(self.v) * (1 - self.h) - f_betah(self.v) * self.h
-        dvdt = (1/self.C) * (self.I + self.gK * self.n**4 * (self.EK-self.v) + self.gNa * self.m**3 * self.h * (self.ENa-self.v) + self.gL * (self.EL-self.v))
+        dvdt = (1/self.C) * (self.I + self.gK * self.n**4 * (self.EK-self.v) +
+                             self.gNa * self.m**3 * self.h * (self.ENa-self.v) + self.gL * (self.EL-self.v))
 
         # Recording the data the sim has calculated (could do directly but seems to be messy)
         self.voltages.append(self.v)
@@ -117,12 +170,17 @@ class Neuron:
         :return: two arrays of voltages and timestamps as calculated by the simulation
         """
         # We want each successive run() to start from the last simulation timestamp so it looks continuous.
-        new_start_time = int(np.floor(self.timestamps[-1]))
+        new_start_time = np.floor(self.timestamps[-1])
+
+        # Temporary fix for misalignment
+        if new_start_time == 50:
+            new_start_time += 1
+
         time_region = np.linspace(new_start_time, new_start_time + time_length, 1000).tolist()
 
         # Initialising the recording system
         self.voltages = [self.v]
-        self.timestamps = [time_region[0]] # Defining where we want to start with our timestamps
+        self.timestamps = [time_region[0]]  # Defining where we want to start with our timestamps
 
         self.I = current_start
 
@@ -138,4 +196,4 @@ run1, timestamps1 = neuron.run(50, 0)
 run2, timestamps2 = neuron.run(3, 1)
 run3, timestamps3 = neuron.run(50, 0)
 
-plot_graph(timestamps1 + timestamps2 + timestamps3, [x - 70 for x in run1 + run2 + run3])
+plot_graph(timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3)
