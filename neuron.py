@@ -66,23 +66,6 @@ def remove_duplicates(time_points, array):
     return rd_time_points, rd_array
 
 
-def plot_graph(time_points, array):
-    """
-    Plots the graph of the given data for an single neuron.
-
-    :param time_points: the time points to plot along x-axis
-    :param array: voltage array to plot along y-axis
-    """
-    # Removes any duplicates we have generated in the sample to provide a clearer-looking graph
-    time_points, array = remove_duplicates(time_points, array)
-
-    # Fix overlaps in graph? could just delete overlapping ones (using set)
-    plt.plot(time_points, array, 'b', linewidth=1)
-    plt.xlabel('Time (ms)')
-    plt.ylabel('Action potential (mV)')
-    #plt.yticks(np.arange(-80, 35, 5))
-    #plt.show()
-
 #####################################################################
 
 
@@ -103,6 +86,13 @@ class Neuron:
 
     run(time_length, current_start):
         Runs the differential equation solver over a specified time period in ms with a specified constant current.
+
+    send_data_forward():
+        Sends the last voltage and timestamp we had from this neuron to the next one along to carry on the signal.
+        Current just framework as this is not actually how neuron connections work.
+
+    get_data_behind(voltage, last_time):
+        Gets the last voltage and timestamp from the neuron connection to start an action potential.
     """
     # Our constants for the diff. equations
     EL = -54.4
@@ -189,16 +179,36 @@ class Neuron:
 
         return self.voltages, self.timestamps
 
-    def send_voltage_forward(self):
+    def send_data_forward(self):
+        """
+        Called when we want to progress from this neuron's action potential to our connections. This will propagate
+        the timing and voltage info to all the other connections we have, and starting an action potential.
+        :return: the data needed for plotting this neuron's graph
+        """
+        # Propagating to our connections
         data = []
         for connection in self.forward_connections:
-            data.append(connection.get_voltage_behind(self.v, self.timestamps[-1]))
+            data.append(connection.get_data_behind(self.v, self.timestamps[-1]))
+
+        # Sending data back for graph
         return data
 
-    def get_voltage_behind(self, voltage, last_time):
+    def get_data_behind(self, voltage, last_time):
+        """
+        After this neuron's back-connections are ready to send data, they send data ahead to their connections like this
+        call. This uses the data to start a new action potential with the data given and this neuron's settings.
+        :param voltage: the new voltage to start at as being sent from the connection
+        :param last_time: the last time stamp to use (temporary)
+        :return: the data needed for plotting this neuron's graph
+        """
+        # Instantiating the new start values
         self.v = voltage
         self.timestamps[-1] = last_time
+
+        # Running action potential
         run1, timestamps1 = self.run(50, 0)
         run2, timestamps2 = self.run(3, 1)
         run3, timestamps3 = self.run(50, 0)
+
+        # Sending data back for graph
         return [timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3]
