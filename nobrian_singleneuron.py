@@ -3,10 +3,6 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from scipy.special import exprel
 
-"""
-I've duplicated this file called "neuron.py" to facilitate the actual model. nobrian_singleneuron.py will stay
-as an archival piece for modelling just a single neuron without brian.
-"""
 
 #####################################################################
 

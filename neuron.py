@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
-from scipy.special import exprel
 
 """
 I've duplicated this file called "neuron.py" to facilitate the actual model. nobrian_singleneuron.py will stay
@@ -82,7 +81,7 @@ def plot_graph(time_points, array):
     plt.xlabel('Time (ms)')
     plt.ylabel('Action potential (mV)')
     #plt.yticks(np.arange(-80, 35, 5))
-    plt.show()
+    #plt.show()
 
 #####################################################################
 
@@ -124,7 +123,7 @@ class Neuron:
     timestamps = [0]
     I = 0
 
-    def __init__(self):
+    def __init__(self, forward_connections):
         """
         The neuron specifics will be put here. For example:
          - different threshold limits
@@ -133,6 +132,7 @@ class Neuron:
          - groups
          - etc
         """
+        self.forward_connections = forward_connections
 
     def f(self, init, t):
         """
@@ -189,11 +189,16 @@ class Neuron:
 
         return self.voltages, self.timestamps
 
+    def send_voltage_forward(self):
+        data = []
+        for connection in self.forward_connections:
+            data.append(connection.get_voltage_behind(self.v, self.timestamps[-1]))
+        return data
 
-neuron = Neuron()
-
-run1, timestamps1 = neuron.run(50, 0)
-run2, timestamps2 = neuron.run(3, 1)
-run3, timestamps3 = neuron.run(50, 0)
-
-plot_graph(timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3)
+    def get_voltage_behind(self, voltage, last_time):
+        self.v = voltage
+        self.timestamps[-1] = last_time
+        run1, timestamps1 = self.run(50, 0)
+        run2, timestamps2 = self.run(3, 1)
+        run3, timestamps3 = self.run(50, 0)
+        return [timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3]
