@@ -7,7 +7,7 @@ from scipy.special import exprel
 #####################################################################
 
 # Definitions of the required variables with respect to voltage. Numbers taken from paper below.
-# https://neuronaldynamics.epfl.ch/online/Ch2.S2.html
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1392413/?page=19 page 518
 
 
 def f_alphan(v):
@@ -172,7 +172,7 @@ class Neuron:
         if new_start_time == 50:
             new_start_time += 1
 
-        time_region = np.linspace(new_start_time, new_start_time + time_length, 1000).tolist()
+        time_region = np.linspace(new_start_time, new_start_time + time_length, 5000).tolist()
 
         # Initialising the recording system
         self.voltages = [self.v]

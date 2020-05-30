@@ -10,7 +10,7 @@ as an archival piece for modelling just a single neuron without brian.
 #####################################################################
 
 # Definitions of the required variables with respect to voltage. Numbers taken from paper below.
-# https://neuronaldynamics.epfl.ch/online/Ch2.S2.html
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1392413/?page=19 page 518
 
 
 def f_alphan(v):
