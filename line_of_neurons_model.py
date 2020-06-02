@@ -18,8 +18,15 @@ for n in neurons:
     # (temp) we need this to get the first one to run
     if neurons.index(n) == 0:
         # Basic action potential logic
-        run1, timestamps1 = n.run(50, 0)
-        run2, timestamps2 = n.run(3, 1)
+        run1 = []
+        timestamps1 = []
+        for i in range(50):
+            a, b = n.run(1, 0)
+            run1 += a
+            timestamps1 += b
+            if i > 25:
+                run2, timestamps2 = n.run(3, 1)
+                break
         run3, timestamps3 = n.run(50, 0)
         data.append([[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3]])
 
@@ -37,3 +44,6 @@ for d in data:
 plt.xlabel('Time (ms)')
 plt.ylabel('Action potential (mV)')
 plt.show()
+
+# Ignore the stuff in this file really, we need to convert the run code in modifiedHH into a function to be run from
+# here

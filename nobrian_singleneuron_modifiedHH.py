@@ -1,8 +1,12 @@
 import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
-from scipy.special import exprel
+#import gui
 
+"""
+This file is the modified Hodgkin-Huxley model for a single neuron. There is no some more custom modelling here,
+especially in regards to how we treat the initial current and hypopolarisation.
+"""
 
 #####################################################################
 
@@ -77,8 +81,9 @@ def plot_graph(time_points, array):
     plt.plot(time_points, array, 'b', linewidth=1)
     plt.xlabel('Time (ms)')
     plt.ylabel('Action potential (mV)')
-    #plt.yticks(np.arange(-80, 35, 5))
+    plt.yticks(np.arange(-80, 35, 5))
     plt.show()
+    #gui.make_plot(time_points, array)
 
 #####################################################################
 
@@ -110,7 +115,7 @@ class Neuron:
     gK = 36
 
     # Initial conditions
-    v = -65
+    v = -62
     h = 0
     m = 0
     n = 0.5
@@ -186,10 +191,46 @@ class Neuron:
         return self.voltages, self.timestamps
 
 
-neuron = Neuron()
+if __name__ == "__main__":
+    neuron = Neuron()
 
-run1, timestamps1 = neuron.run(50, 0)
-run2, timestamps2 = neuron.run(3, 1)
-run3, timestamps3 = neuron.run(50, 0)
+    run1 = []
+    timestamps1 = []
+    testv = neuron.v
+    trigger_time_ms = 10
+    # If activation const is not high enough the neuron will fail to fire
+    activation_const = 2
 
-plot_graph(timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3)
+    """
+    This new model is not scientifically accurate. We can have two different models if we want, one which only uses the
+    given simulations of HH and another which is slightly not true to life but gives a "better signal" using some forced
+    thresholding.
+    """
+    for i in range(100):
+        # Run normally
+        if i > trigger_time_ms:
+            # choosing sine was just an option to make it able to fail by falling back down.
+            testv += np.sin(np.pi/12 * (i - trigger_time_ms)) * activation_const
+
+            """-62 is the base potential for the membrane. If the activation potential after trigger time does not cause
+            the action potential and comes back down (as sinusoidal) then it gets stopped at -62. This is very technically
+            inaccurate but it makes a good looking signal."""
+            if testv <= -62:
+                break
+        neuron.run(1, 0)
+        run1.append(testv)
+        timestamps1.append(i)
+        print(f"Voltage: {testv}")
+        if testv > -55:
+            neuron.v = testv
+            run2, timestamps2 = neuron.run(3, 1)
+            run2 = [x + 10 for x in run2]
+            break
+        else:
+            run2, timestamps2 = [], []
+    run3, timestamps3 = neuron.run(30, 0)
+
+    run2, timestamps2 = run2[200:], timestamps2[200:]
+    plot_graph(timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3)
+
+    # Running action potential
