@@ -179,7 +179,6 @@ class Neuron:
 
         # The actual differential equation solving
         odeint(self.f, [self.n, self.m, self.h, self.v], time_region)
-
         return self.voltages, self.timestamps
 
     def send_data_forward(self):
@@ -191,7 +190,7 @@ class Neuron:
         # Propagating to our connections
         data = []
         for connection in self.forward_connections:
-            data += connection.get_data_behind(self.v, self.timestamps[-1])[0]
+            data += connection.get_data_behind(self.v, self.timestamps[-1])
             data += connection.send_data_forward()
 
         # Sending data back for graph
@@ -245,4 +244,4 @@ class Neuron:
         run2, timestamps2 = run2[200:], timestamps2[200:]
 
         # Sending data back for graph
-        return [[[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]]]
+        return [[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]]
