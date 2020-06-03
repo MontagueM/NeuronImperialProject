@@ -61,9 +61,11 @@ def remove_duplicates(time_points, array):
             rd_array.append(array[i])
         else:
             num += 1
+    time_points = rd_time_points
+    array = rd_array
 
     print(f"Removed {num} duplicates")
-    return rd_time_points, rd_array
+    return time_points, array
 
 
 #####################################################################
@@ -103,7 +105,7 @@ class Neuron:
     gK = 36
 
     # Initial conditions
-    v = -65
+    v = -62
     h = 0
     m = 0
     n = 0.5
@@ -113,7 +115,7 @@ class Neuron:
     timestamps = [0]
     I = 0
 
-    def __init__(self, forward_connections):
+    def __init__(self, forward_connections, number_identifier):
         """
         The neuron specifics will be put here. For example:
          - different threshold limits
@@ -123,6 +125,7 @@ class Neuron:
          - etc
         """
         self.forward_connections = forward_connections
+        self.number_identifier = number_identifier
 
     def f(self, init, t):
         """
@@ -188,12 +191,13 @@ class Neuron:
         # Propagating to our connections
         data = []
         for connection in self.forward_connections:
-            data.append(connection.get_data_behind(self.v, self.timestamps[-1]))
+            data += connection.get_data_behind(self.v, self.timestamps[-1])[0]
+            data += connection.send_data_forward()
 
         # Sending data back for graph
         return data
 
-    def get_data_behind(self, voltage, last_time):
+    def get_data_behind(self, voltage=None, last_time=0):
         """
         After this neuron's back-connections are ready to send data, they send data ahead to their connections like this
         call. This uses the data to start a new action potential with the data given and this neuron's settings.
@@ -201,22 +205,35 @@ class Neuron:
         :param last_time: the last time stamp to use (temporary)
         :return: the data needed for plotting this neuron's graph
         """
-        # Instantiating the new start values
-        self.v = voltage
+
+        print(f"Getting data for neuron #{self.number_identifier}")
+
+        if voltage is not None:
+            # Instantiating the new start values
+            self.v = voltage
         self.timestamps[-1] = last_time
 
         # Running action potential
         run1 = []
         timestamps1 = []
-        testv = voltage
-        for i in range(50):
-            if i > 0:
-                testv += (1-np.exp(-0.1*i))*3
-                print(self.voltages)
-            a, b = self.run(1, 0)
+        testv = self.v
+        trigger_time_ms = 10
+        # If activation const is not high enough the neuron will fail to fire
+        activation_const = 2
+        for i in range(100):
+            # Run normally
+            if i > trigger_time_ms:
+                # choosing sine was just an option to make it able to fail by falling back down.
+                testv += np.sin(np.pi / 12 * (i - trigger_time_ms)) * activation_const
+
+                """-62 is the base potential for the membrane. If the activation potential after trigger time does not cause
+                the action potential and comes back down (as sinusoidal) then it gets stopped at -62. This is very technically
+                inaccurate but it makes a good looking signal."""
+                if testv <= -62:
+                    break
+            self.run(1, 0)
             run1.append(testv)
             timestamps1.append(last_time + i)
-            print(f"Voltage: {testv}")
             if testv > -55:
                 self.v = testv
                 run2, timestamps2 = self.run(3, 1)
@@ -224,7 +241,8 @@ class Neuron:
                 break
             else:
                 run2, timestamps2 = [], []
-        run3, timestamps3 = self.run(50, 0)
-        print("Done")
+        run3, timestamps3 = self.run(30, 0)
+        run2, timestamps2 = run2[200:], timestamps2[200:]
+
         # Sending data back for graph
-        return [timestamps1 + timestamps2[200:] + timestamps3, run1 + run2[200:] + run3]
+        return [[[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]]]
