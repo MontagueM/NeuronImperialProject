@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.integrate import odeint
-import matplotlib.pyplot as plt
+from enum import Enum
+import random
 
 """
 I've duplicated this file called "neuron.py" to facilitate the actual model. nobrian_singleneuron_modifiedHH.py will stay
@@ -70,6 +71,13 @@ def remove_duplicates(time_points, array):
 
 #####################################################################
 
+class NeuronType(Enum):
+    """
+    Enum that represents the different types of neuron with their respective probability of causing subsequent firings.
+    """
+    EXCITATORY = 0.8
+    INHIBITORY = 0.2
+
 
 class Neuron:
     """
@@ -115,7 +123,7 @@ class Neuron:
     timestamps = [0]
     I = 0
 
-    def __init__(self, forward_connections, number_identifier):
+    def __init__(self, forward_connections, number_identifier, neuron_type):
         """
         The neuron specifics will be put here. For example:
          - different threshold limits
@@ -126,6 +134,11 @@ class Neuron:
         """
         self.forward_connections = forward_connections
         self.number_identifier = number_identifier
+        if type(neuron_type) == type(NeuronType.EXCITATORY):
+            self.neuron_type = neuron_type
+        else:
+            print(f"Did not specify a correct neuron type. Given {type(neuron_type)}, need { type(NeuronType.EXCITATORY)}")
+            quit()
 
     def f(self, init, t):
         """
@@ -191,7 +204,8 @@ class Neuron:
         data = []
         for connection in self.forward_connections:
             data += connection.get_data_behind(self.v, self.timestamps[-1])
-            data += connection.send_data_forward()
+            if random.random() < self.neuron_type.value:
+                data += connection.send_data_forward()
 
         # Sending data back for graph
         return data
