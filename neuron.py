@@ -2,6 +2,7 @@ import numpy as np
 from scipy.integrate import odeint
 from enum import Enum
 import random
+from map_connections_model import RUNTIME_MS
 
 """
 I've duplicated this file called "neuron.py" to facilitate the actual model. nobrian_singleneuron_modifiedHH.py will stay
@@ -36,37 +37,6 @@ def f_alphah(v):
 
 def f_betah(v):
     return 1 / (1 + np.exp(-(v + 35) / 10))
-
-#####################################################################
-
-# Dealing with plotting the neuron
-
-
-def remove_duplicates(time_points, array):
-    """
-    Since the algorithm produces duplicate results for some of the data, this removes duplicates for speed of computation
-    (in case a higher complexity calculation must be done) and visual appeal on a graph.
-
-    :return: the arrays with zero duplicates
-    """
-    print("Removing duplicates")
-
-    # removed duplicates
-    rd_time_points = []
-    rd_array = []
-
-    num = 0
-    for i in range(len(time_points)):
-        if time_points[i] not in rd_time_points:
-            rd_time_points.append(time_points[i])
-            rd_array.append(array[i])
-        else:
-            num += 1
-    time_points = rd_time_points
-    array = rd_array
-
-    print(f"Removed {num} duplicates")
-    return time_points, array
 
 
 #####################################################################
@@ -123,7 +93,7 @@ class Neuron:
     timestamps = [0]
     I = 0
 
-    def __init__(self, forward_connections, number_identifier, neuron_type):
+    def __init__(self, number_identifier):
         """
         The neuron specifics will be put here. For example:
          - different threshold limits
@@ -132,13 +102,13 @@ class Neuron:
          - groups
          - etc
         """
-        self.forward_connections = forward_connections
+        self.forward_connections = []
         self.number_identifier = number_identifier
-        if type(neuron_type) == type(NeuronType.EXCITATORY):
-            self.neuron_type = neuron_type
-        else:
-            print(f"Did not specify a correct neuron type. Given {type(neuron_type)}, need { type(NeuronType.EXCITATORY)}")
-            quit()
+        # if type(neuron_type) == type(NeuronType.EXCITATORY):
+        #     self.neuron_type = neuron_type
+        # else:
+        #     print(f"Did not specify a correct neuron type. Given {type(neuron_type)}, need { type(NeuronType.EXCITATORY)}")
+        #     quit()
 
     def f(self, init, t):
         """
@@ -202,10 +172,12 @@ class Neuron:
         """
         # Propagating to our connections
         data = []
-        for connection in self.forward_connections:
-            data += connection.get_data_behind(self.v, self.timestamps[-1])
-            if random.random() < self.neuron_type.value:
-                data += connection.send_data_forward()
+
+        if self.timestamps[-1] < RUNTIME_MS:
+            for connection, connection_type in self.forward_connections.items():
+                data += connection.get_data_behind(self.v, self.timestamps[-1])
+                if random.random() < connection_type.value:
+                    data += connection.send_data_forward()
 
         # Sending data back for graph
         return data
@@ -218,7 +190,6 @@ class Neuron:
         :param last_time: the last time stamp to use (temporary)
         :return: the data needed for plotting this neuron's graph
         """
-
         print(f"Getting data for neuron #{self.number_identifier}")
 
         if voltage is not None:
