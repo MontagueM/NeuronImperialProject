@@ -3,6 +3,8 @@ from scipy.integrate import odeint
 from enum import Enum
 import random
 from map_connections_model import RUNTIME_MS
+import sys
+sys.setrecursionlimit(1000000)
 
 """
 I've duplicated this file called "neuron.py" to facilitate the actual model. nobrian_singleneuron_modifiedHH.py will stay
@@ -164,7 +166,7 @@ class Neuron:
         odeint(self.f, [self.n, self.m, self.h, self.v], time_region)
         return self.voltages, self.timestamps
 
-    def send_data_forward(self):
+    def send_data_forward(self, stored_data=[]):
         """
         Called when we want to progress from this neuron's action potential to our connections. This will propagate
         the timing and voltage info to all the other connections we have, and starting an action potential.
@@ -174,20 +176,23 @@ class Neuron:
         data = []
         activity_data = []
 
-        if self.timestamps[-1] < RUNTIME_MS:
+        if self.timestamps[-1] < RUNTIME_MS*10:
+            call_time = self.timestamps[-1]
             for connection, connection_type in self.forward_connections.items():
-                data_add1, activity_data_add1 = connection.get_data_behind(self.v, self.timestamps[-1])
+                #print(f"Calling data from neuron #{connection.number_identifier} from #{self.number_identifier} timestamp {call_time}")
+                data_add1, activity_data_add1 = connection.get_data_behind(last_time=call_time, stored_data=stored_data)
                 data += data_add1
                 activity_data.append(activity_data_add1)
                 if random.random() < connection_type.value:
-                    data_add2, activity_data_add2 = connection.send_data_forward()
+                    data_add2, activity_data_add2 = connection.send_data_forward(stored_data)
                     data += data_add2
                     activity_data += activity_data_add2
+
 
         # Sending data back for graph
         return data, activity_data
 
-    def get_data_behind(self, voltage=None, last_time=0):
+    def get_data_behind(self, last_time=0, stored_data=[]):
         """
         After this neuron's back-connections are ready to send data, they send data ahead to their connections like this
         call. This uses the data to start a new action potential with the data given and this neuron's settings.
@@ -195,44 +200,52 @@ class Neuron:
         :param last_time: the last time stamp to use (temporary)
         :return: the data needed for plotting this neuron's graph
         """
-        #print(f"Getting data for neuron #{self.number_identifier}")
+        print(f"Getting data for neuron #{self.number_identifier} timestamp {last_time}")
+        if self.number_identifier == -1:
 
-        if voltage is not None:
             # Instantiating the new start values
-            self.v = voltage
-        self.timestamps[-1] = last_time
+            self.timestamps[-1] = last_time
 
-        # Running action potential
-        run1 = []
-        timestamps1 = []
-        testv = self.v
-        trigger_time_ms = 10
-        # If activation const is not high enough the neuron will fail to fire
-        activation_const = 2
-        for i in range(100):
-            # Run normally
-            if i > trigger_time_ms:
-                # choosing sine was just an option to make timestampsit able to fail by falling back down.
-                testv += np.sin(np.pi / 12 * (i - trigger_time_ms)) * activation_const
+            # Running action potential
+            run1 = []
+            timestamps1 = []
+            testv = self.v
+            trigger_time_ms = 10
+            # If activation const is not high enough the neuron will fail to fire
+            activation_const = 2
+            for i in range(100):
+                # Run normally
+                if i > trigger_time_ms:
+                    # choosing sine was just an option to make it able to fail by falling back down.
+                    testv += np.sin(np.pi / 12 * (i - trigger_time_ms)) * activation_const
 
-                """-62 is the base potential for the membrane. If the activation potential after trigger time does not cause
-                the action potential and comes back down (as sinusoidal) then it gets stopped at -62. This is very technically
-                inaccurate but it makes a good looking signal."""
-                if testv <= -62:
+                    """-62 is the base potential for the membrane. If the activation potential after trigger time does not cause
+                    the action potential and comes back down (as sinusoidal) then it gets stopped at -62. This is very technically
+                    inaccurate but it makes a good looking signal."""
+                    if testv <= -62:
+                        break
+                self.run(1, 0)
+                run1.append(testv)
+                timestamps1.append(last_time + i)
+                if testv > -55:
+                    self.v = testv
+                    run2, timestamps2 = self.run(3, 1)
+                    run2 = [x + 10 for x in run2]
                     break
-            self.run(1, 0)
-            run1.append(testv)
-            timestamps1.append(last_time + i)
-            if testv > -55:
-                self.v = testv
-                run2, timestamps2 = self.run(3, 1)
-                run2 = [x + 10 for x in run2]
-                break
-            else:
-                run2, timestamps2 = [], []
-        run3, timestamps3 = self.run(30, 0)
-        run2, timestamps2 = run2[200:], timestamps2[200:]
-        activity_data = timestamps2[-1]
-        print(f"adding activity {activity_data} for neuron #{self.number_identifier}")
-        # Sending data back for graph
-        return [[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]], activity_data
+                else:
+                    run2, timestamps2 = [], []
+            run3, timestamps3 = self.run(30, 0)
+            run2, timestamps2 = run2[200:], timestamps2[200:]
+            activity_data = timestamps2[-1]
+            #print(f"adding activity {activity_data} for neuron #{self.number_identifier}")
+            # Sending data back for graph
+            return [[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]], activity_data, timestamps2
+        else:
+            if stored_data:
+                adjusted_stored_timestamps = [x + self.timestamps[-1] for x in stored_data[0]]
+                activity_data = stored_data[2][-1] + last_time
+                #print(self.number_identifier, activity_data)
+                self.timestamps += adjusted_stored_timestamps
+                return [[adjusted_stored_timestamps, stored_data[1], self.number_identifier]], activity_data
+            print("No dat")
+            return [[]], None
