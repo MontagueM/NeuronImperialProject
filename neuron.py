@@ -172,15 +172,20 @@ class Neuron:
         """
         # Propagating to our connections
         data = []
+        activity_data = []
 
         if self.timestamps[-1] < RUNTIME_MS:
             for connection, connection_type in self.forward_connections.items():
-                data += connection.get_data_behind(self.v, self.timestamps[-1])
+                data_add1, activity_data_add1 = connection.get_data_behind(self.v, self.timestamps[-1])
+                data += data_add1
+                activity_data.append(activity_data_add1)
                 if random.random() < connection_type.value:
-                    data += connection.send_data_forward()
+                    data_add2, activity_data_add2 = connection.send_data_forward()
+                    data += data_add2
+                    activity_data += activity_data_add2
 
         # Sending data back for graph
-        return data
+        return data, activity_data
 
     def get_data_behind(self, voltage=None, last_time=0):
         """
@@ -190,7 +195,7 @@ class Neuron:
         :param last_time: the last time stamp to use (temporary)
         :return: the data needed for plotting this neuron's graph
         """
-        print(f"Getting data for neuron #{self.number_identifier}")
+        #print(f"Getting data for neuron #{self.number_identifier}")
 
         if voltage is not None:
             # Instantiating the new start values
@@ -227,6 +232,7 @@ class Neuron:
                 run2, timestamps2 = [], []
         run3, timestamps3 = self.run(30, 0)
         run2, timestamps2 = run2[200:], timestamps2[200:]
-
+        activity_data = timestamps2[-1]
+        print(f"adding activity {activity_data} for neuron #{self.number_identifier}")
         # Sending data back for graph
-        return [[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]]
+        return [[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]], activity_data
