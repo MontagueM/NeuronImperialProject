@@ -9,8 +9,6 @@ RUNTIME_MS = 4000
 TOTAL_NEURON_COUNT = 6000
 PERCENT_CONNECTED_NEURONS_PER = 10
 EXCITATORY_PROBABILITY = 0.8
-# CHECK IF THIS PROB IS ACTUALLY BEING USED
-# FIGURE OUT HOW TO CORRECT THE DATA BEING WRONG
 
 neurons = []
 data = []
@@ -76,7 +74,8 @@ if __name__ == '__main__':
     print(activity_set, activity_y)
     with open('activity.txt', 'a') as f:
         f.write(f"{activity_set}\n{activity_y}\nRUNTIME_MS {RUNTIME_MS} TOTCOUNT {TOTAL_NEURON_COUNT} EXCITE_PROB {EXCITATORY_PROBABILITY} ACTIVITY {calculate_activity()}\n\n")
-    plt.plot([x/10 for x in activity_set], activity_y)
+    plt.plot([x/10 for x in activity_set], activity_y, label=f"RUNTIME_MS {RUNTIME_MS} TOTCOUNT {TOTAL_NEURON_COUNT} EXCITE_PROB {EXCITATORY_PROBABILITY}")
     plt.xlabel("Time [ms]")
     plt.ylabel("Count per unit time")
+    plt.legend()
     plt.show()

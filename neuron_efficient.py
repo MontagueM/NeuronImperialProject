@@ -4,6 +4,7 @@ from enum import Enum
 import random
 from map_connections_model import RUNTIME_MS
 import sys
+import time
 sys.setrecursionlimit(1000000)
 
 """
@@ -94,6 +95,7 @@ class Neuron:
     voltages = []
     timestamps = [0]
     I = 0
+    fire_time = 1e9
 
     def __init__(self, number_identifier):
         """
@@ -183,10 +185,14 @@ class Neuron:
                 data_add1, activity_data_add1 = connection.get_data_behind(last_time=call_time, stored_data=stored_data)
                 data += data_add1
                 activity_data.append(activity_data_add1)
+                print(time.time() - self.fire_time)
                 if random.random() < connection_type.value:
-                    data_add2, activity_data_add2 = connection.send_data_forward(stored_data)
-                    data += data_add2
-                    activity_data += activity_data_add2
+                    if (time.time() - self.fire_time) > 2e-3:
+                        data_add2, activity_data_add2 = connection.send_data_forward(stored_data)
+                        data += data_add2
+                        activity_data += activity_data_add2
+                    else:
+                        print(f"Rejecting call for neuron #{self.number_identifier} as {(time.time() - self.fire_time)} < {2e-3}")
 
 
         # Sending data back for graph
@@ -246,6 +252,7 @@ class Neuron:
                 activity_data = stored_data[2][-1] + last_time
                 #print(self.number_identifier, activity_data)
                 self.timestamps += adjusted_stored_timestamps
+                self.fire_time = time.time()
                 return [[adjusted_stored_timestamps, stored_data[1], self.number_identifier]], activity_data
             print("No dat")
             return [[]], None
