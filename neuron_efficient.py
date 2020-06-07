@@ -5,12 +5,8 @@ import random
 from map_connections_model import RUNTIME_MS
 import sys
 import time
+# To stop any recursion limits from stopping the simulation from running at high neuron counts
 sys.setrecursionlimit(1000000)
-
-"""
-I've duplicated this file called "neuron.py" to facilitate the actual model. nobrian_singleneuron_modifiedHH.py will stay
-as an archival piece for modelling just a single neuron without brian.
-"""
 
 #####################################################################
 
@@ -60,6 +56,8 @@ class Neuron:
 
     Attributes
     ----------
+    number_identifier:
+        the number that this specific neuron is in our model to help understand propagation
 
     Methods
     -------
@@ -91,28 +89,15 @@ class Neuron:
     m = 0
     n = 0.5
     C = 1e-6
-    #R = 35.4
+
     voltages = []
     timestamps = [0]
     I = 0
     fire_time = 1e9
 
     def __init__(self, number_identifier):
-        """
-        The neuron specifics will be put here. For example:
-         - different threshold limits
-         - excitatory vs inhibitory
-         - numerical identifications
-         - groups
-         - etc
-        """
         self.forward_connections = []
         self.number_identifier = number_identifier
-        # if type(neuron_type) == type(NeuronType.EXCITATORY):
-        #     self.neuron_type = neuron_type
-        # else:
-        #     print(f"Did not specify a correct neuron type. Given {type(neuron_type)}, need { type(NeuronType.EXCITATORY)}")
-        #     quit()
 
     def f(self, init, t):
         """
@@ -168,44 +153,56 @@ class Neuron:
         odeint(self.f, [self.n, self.m, self.h, self.v], time_region)
         return self.voltages, self.timestamps
 
-    def send_data_forward(self, stored_data=[]):
+    def send_data_forward(self, stored_data=None):
         """
         Called when we want to progress from this neuron's action potential to our connections. This will propagate
         the timing and voltage info to all the other connections we have, and starting an action potential.
         :return: the data needed for plotting this neuron's graph
         """
-        # Propagating to our connections
-        data = []
+        if stored_data is None:
+            stored_data = []
         activity_data = []
 
-        if self.timestamps[-1] < RUNTIME_MS*10:
+        # We only want to allow propagations to occur during a specific time period
+        if self.timestamps[-1] < RUNTIME_MS:
+            # The time to send to our connections as their start time
             call_time = self.timestamps[-1]
+
+            # For every connection we have, try to call them to start their action potential
             for connection, connection_type in self.forward_connections.items():
-                #print(f"Calling data from neuron #{connection.number_identifier} from #{self.number_identifier} timestamp {call_time}")
-                data_add1, activity_data_add1 = connection.get_data_behind(last_time=call_time, stored_data=stored_data)
-                data += data_add1
-                activity_data.append(activity_data_add1)
-                print(time.time() - self.fire_time)
+                # We'll allow a connection if its connection propagation probability is good
+
+                # Sending the call for the connection's action potential
+                # activity_data_add1 = connection.get_data_behind(last_time=call_time, stored_data=stored_data)
+                # activity_data.append(activity_data_add1)
                 if random.random() < connection_type.value:
+                    # AND if it hasn't fired in the last 2ms (hyperpolarisation time)
+
                     if (time.time() - self.fire_time) > 2e-3:
-                        data_add2, activity_data_add2 = connection.send_data_forward(stored_data)
-                        data += data_add2
+                        # Sending the call for the connection's action potential
+                        activity_data_add1 = connection.get_data_behind(last_time=call_time, stored_data=stored_data)
+                        activity_data.append(activity_data_add1)
+
+                        # Propagating the signal on
+                        activity_data_add2 = connection.send_data_forward(stored_data)
                         activity_data += activity_data_add2
                     else:
                         print(f"Rejecting call for neuron #{self.number_identifier} as {(time.time() - self.fire_time)} < {2e-3}")
 
 
         # Sending data back for graph
-        return data, activity_data
+        return activity_data
 
-    def get_data_behind(self, last_time=0, stored_data=[]):
+    def get_data_behind(self, last_time=0, stored_data=None):
         """
         After this neuron's back-connections are ready to send data, they send data ahead to their connections like this
         call. This uses the data to start a new action potential with the data given and this neuron's settings.
-        :param voltage: the new voltage to start at as being sent from the connection
-        :param last_time: the last time stamp to use (temporary)
+        :param last_time: the last time stamp to use
+        :param stored_data: the stored data from the neuron simulation. We need to do this to allow for a large sim
         :return: the data needed for plotting this neuron's graph
         """
+        if stored_data is None:
+            stored_data = []
         print(f"Getting data for neuron #{self.number_identifier} timestamp {last_time}")
         if self.number_identifier == -1:
 
@@ -243,16 +240,14 @@ class Neuron:
             run3, timestamps3 = self.run(30, 0)
             run2, timestamps2 = run2[200:], timestamps2[200:]
             activity_data = timestamps2[-1]
-            #print(f"adding activity {activity_data} for neuron #{self.number_identifier}")
             # Sending data back for graph
             return [[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]], activity_data, timestamps2
         else:
             if stored_data:
                 adjusted_stored_timestamps = [x + self.timestamps[-1] for x in stored_data[0]]
-                activity_data = stored_data[2][-1] + last_time
-                #print(self.number_identifier, activity_data)
+                activity_data = stored_data[1][-1] + last_time
                 self.timestamps += adjusted_stored_timestamps
                 self.fire_time = time.time()
-                return [[adjusted_stored_timestamps, stored_data[1], self.number_identifier]], activity_data
-            print("No dat")
+                return activity_data
+            print("No data")
             return [[]], None
