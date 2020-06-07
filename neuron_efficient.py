@@ -2,7 +2,6 @@ import numpy as np
 from scipy.integrate import odeint
 from enum import Enum
 import random
-from map_connections_model import RUNTIME_MS
 import sys
 import time
 # To stop any recursion limits from stopping the simulation from running at high neuron counts
@@ -153,7 +152,7 @@ class Neuron:
         odeint(self.f, [self.n, self.m, self.h, self.v], time_region)
         return self.voltages, self.timestamps
 
-    def send_data_forward(self, stored_data=None):
+    def send_data_forward(self, runtime_ms, stored_data=None):
         """
         Called when we want to progress from this neuron's action potential to our connections. This will propagate
         the timing and voltage info to all the other connections we have, and starting an action potential.
@@ -164,7 +163,7 @@ class Neuron:
         activity_data = []
 
         # We only want to allow propagations to occur during a specific time period
-        if self.timestamps[-1] < RUNTIME_MS:
+        if self.timestamps[-1] < runtime_ms:
             # The time to send to our connections as their start time
             call_time = self.timestamps[-1]
 
@@ -184,7 +183,7 @@ class Neuron:
                         activity_data.append(activity_data_add1)
 
                         # Propagating the signal on
-                        activity_data_add2 = connection.send_data_forward(stored_data)
+                        activity_data_add2 = connection.send_data_forward(runtime_ms, stored_data)
                         activity_data += activity_data_add2
                     else:
                         print(f"Rejecting call for neuron #{self.number_identifier} as {(time.time() - self.fire_time)} < {2e-3}")
@@ -203,7 +202,7 @@ class Neuron:
         """
         if stored_data is None:
             stored_data = []
-        print(f"Getting data for neuron #{self.number_identifier} timestamp {last_time}")
+        #print(f"Getting data for neuron #{self.number_identifier} timestamp {last_time}")
         if self.number_identifier == -1:
 
             # Instantiating the new start values
@@ -239,9 +238,9 @@ class Neuron:
                     run2, timestamps2 = [], []
             run3, timestamps3 = self.run(30, 0)
             run2, timestamps2 = run2[200:], timestamps2[200:]
-            activity_data = timestamps2[-1]
+            #activity_data = timestamps2[-1]
             # Sending data back for graph
-            return [[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]], activity_data, timestamps2
+            return [[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]], timestamps2
         else:
             if stored_data:
                 adjusted_stored_timestamps = [x + self.timestamps[-1] for x in stored_data[0]]
