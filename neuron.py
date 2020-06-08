@@ -2,7 +2,6 @@ import numpy as np
 from scipy.integrate import odeint
 from enum import Enum
 import random
-from map_connections_model import RUNTIME_MS
 
 """
 I've duplicated this file called "neuron.py" to facilitate the actual model. nobrian_singleneuron_modifiedHH.py will stay
@@ -164,7 +163,7 @@ class Neuron:
         odeint(self.f, [self.n, self.m, self.h, self.v], time_region)
         return self.voltages, self.timestamps
 
-    def send_data_forward(self):
+    def send_data_forward(self, runtime_ms):
         """
         Called when we want to progress from this neuron's action potential to our connections. This will propagate
         the timing and voltage info to all the other connections we have, and starting an action potential.
@@ -174,13 +173,13 @@ class Neuron:
         data = []
         activity_data = []
 
-        if self.timestamps[-1] < RUNTIME_MS:
+        if self.timestamps[-1] < runtime_ms:
             for connection, connection_type in self.forward_connections.items():
                 data_add1, activity_data_add1 = connection.get_data_behind(self.v, self.timestamps[-1])
                 data += data_add1
                 activity_data.append(activity_data_add1)
                 if random.random() < connection_type.value:
-                    data_add2, activity_data_add2 = connection.send_data_forward()
+                    data_add2, activity_data_add2 = connection.send_data_forward(runtime_ms)
                     data += data_add2
                     activity_data += activity_data_add2
 
@@ -235,4 +234,6 @@ class Neuron:
         activity_data = timestamps2[-1]
         print(f"adding activity {activity_data} for neuron #{self.number_identifier}")
         # Sending data back for graph
+        if self.number_identifier == -1:
+            return timestamps1 + timestamps2
         return [[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]], activity_data
