@@ -42,30 +42,37 @@ class MapModel:
         print([len(x) for x in self.neuron_layer_dict.values()])
 
     def try_get_layer_connection(self, layer):
-        probability = random.random()
-        # adjusted_layer_fixed_probs = {x:y for x,y in self.layer_fixed_conn_probs.items() if '->' not in x or x[0] == layer}
-        adjusted_layer_fixed_probs = self.layer_fixed_conn_probs
-        # for x in self.layer_fixed_conn_probs:
-        #     if '->' not in x:
-        #         adjusted_layer_fixed_probs.append(x)
-        #     elif :
-        #         adjusted_layer_fixed_probs.append(x)
-        # print(adjusted_layer_fixed_probs)
-        # if layer == '2':
+        """
+        Don't do this
+        Add up all the probs in adjusted layer fixed probs and pick a random prob (0, maxprob) and take that prob
+        to be what "index" you should pick
+        """
+
+        adjusted_layer_fixed_probs = {x:y for x,y in self.layer_fixed_conn_probs.items() if x.split('->')[0] == layer}
+        sum_probs = sum(adjusted_layer_fixed_probs.values())
+        probability = random.uniform(0, sum_probs)
+        t = probability
+        connection_layer = -1
+        for dict_layer, dict_value in adjusted_layer_fixed_probs.items():
+            probability -= dict_value
+            if probability <= 0:
+                connection_layer = dict_layer
+                break
+        if connection_layer == -1:
+            print('dumb')
+            quit()
+        # print(f'Prob {probability}')
+        # if layer == '6':
         #     print('')
-        try_layer_connection = random.randint(0, len(adjusted_layer_fixed_probs.keys()) - 1)
-        connection_layer = list(adjusted_layer_fixed_probs.keys())[try_layer_connection]
+        # try_layer_connection = random.randint(0, len(adjusted_layer_fixed_probs.keys()) - 1)
+        # connection_layer = list(adjusted_layer_fixed_probs.keys())[try_layer_connection]
         # print(layer, connection_layer)
         if '->' in connection_layer:
-            if connection_layer[0] == layer:
-                if probability < try_layer_connection:
-                    # print(f'returning {connection_layer.split("->")[-1]}')
-                    return connection_layer.split('->')[-1]
+            # print(f'returning {connection_layer.split("->")[-1]}')
+            return connection_layer.split('->')[-1]
         else:
-            if probability < try_layer_connection:
-                # print(f'returning {connection_layer}')
-                return connection_layer
-        #return self.try_get_layer_connection(layer)
+            # print(f'returning {connection_layer}')
+            return connection_layer
 
     def populate_neuron_connections(self, n, layer):
         """
@@ -79,8 +86,6 @@ class MapModel:
         number_of_connections = round(len(self.neurons)*0.10)
         for i in range(number_of_connections):
             layer_to_connect_to = self.try_get_layer_connection(layer)
-            if layer_to_connect_to is None:
-                continue
             # print(layer_to_connect_to)
             random_index = random.randint(0, len(self.neuron_layer_dict.values())-1)
             connecting_neuron = self.neuron_layer_dict[layer_to_connect_to][random_index]
@@ -106,11 +111,13 @@ class MapModel:
             """
             for neuron in neurons:
                 self.populate_neuron_connections(neuron, layer)
-        neuron_start_index = random.randint(0, len(self.neurons)-1)
-        print(f"going to start propagation with index {neuron_start_index}")
+        # neuron_start_index = random.randint(0, len(self.neurons)-1)
+        neuron_start_index = 2500
+        start_neuron = self.neurons[neuron_start_index]
+        print(f"going to start propagation with id {start_neuron.number_identifier} of layer{start_neuron.layer}")
         # Starts the propagation
         print(self.neurons[neuron_start_index].forward_connections)
-        activity_data_add = self.neurons[neuron_start_index].send_data_forward(runtime_ms=self.runtime_ms,
+        activity_data_add = start_neuron.send_data_forward(runtime_ms=self.runtime_ms,
                                                               stored_data=self.stored_timestamps)
         self.activity_data += activity_data_add
 
