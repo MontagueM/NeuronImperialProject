@@ -7,7 +7,8 @@ sys.setrecursionlimit(1000000)
 
 class NeuronType(Enum):
     """
-    Enum that represents the different types of neuron with their respective probability of causing subsequent firings.
+    Enum that represents the different types of neuron connection with their respective probability of causing
+     subsequent firings.
     """
     EXCITATORY = 0.8
     INHIBITORY = 0.2
@@ -45,9 +46,10 @@ class Neuron:
     timestamps = [0]
     I = 0
 
-    def __init__(self, number_identifier):
-        self.forward_connections = []
+    def __init__(self, number_identifier, layer):
+        self.forward_connections = {}
         self.number_identifier = number_identifier
+        self.layer = layer
 
     def send_data_forward(self, runtime_ms, stored_data=None):
         """
@@ -68,9 +70,9 @@ class Neuron:
             for connection, connection_type in self.forward_connections.items():
                 # We'll allow a connection if its connection propagation probability is good
                 # Sending the call for the connection's action potential
-                random_time = random.random()
-                activity_data_add1 = connection.get_data_behind(last_time=call_time + random_time, stored_data=stored_data)
-                activity_data.append(activity_data_add1)
+                #random_time = random.random()
+                activity_data_add1, num_identifier = connection.get_data_behind(last_time=call_time, stored_data=stored_data)
+                activity_data.append([activity_data_add1, num_identifier])
                 # the connection type of this connection determines if we actually get anything back
                 if random.random() < connection_type.value:
                     # Propagating the signal on
@@ -96,4 +98,4 @@ class Neuron:
             activity_data = stored_data[-1] + last_time
             self.timestamps += adjusted_stored_timestamps
             #print(activity_data)
-            return activity_data
+            return activity_data, self.number_identifier

@@ -13,11 +13,13 @@ class MapModel:
     # to help with the model.
     stored_timestamps = []
 
-    def __init__(self, runtime_ms, total_neuron_count, fixed_connectivity_probability, excitatory_probability):
+    def __init__(self, runtime_ms, layer_neuron_count, layer_fixed_conn_probs, layer_excitatory_probs, layers):
         self.runtime_ms = runtime_ms
-        self.total_neuron_count = total_neuron_count
-        self.fixed_connectivity_probability = fixed_connectivity_probability
-        self.excitatory_probability = excitatory_probability
+        self.layer_neuron_count = layer_neuron_count
+        self.layer_fixed_conn_probs = layer_fixed_conn_probs
+        self.layer_excitatory_probs = layer_excitatory_probs
+        self.layers = layers  # Array of all possible layers eg [1, 3, 5a]
+        self.neuron_layer_dict = {key: [] for key in layers}
 
     def get_stored_data(self):
         """ Gets all the stored data we need at the beginning of the model simulation """
@@ -28,10 +30,44 @@ class MapModel:
 
     def populate_neurons(self):
         """ Appends the neuron array with all the connections it needs """
-        for i in range(self.total_neuron_count):
-            self.neurons.append(neuron.Neuron(self.total_neuron_count - i))
+        layer_to_make_on = 0
+        for i in range(sum(list(self.layer_neuron_count.values()))):
+            if self.layer_neuron_count[self.layers[layer_to_make_on]] == 0:
+                layer_to_make_on += 1
+            layer = self.layers[layer_to_make_on]
+            self.layer_neuron_count[layer] -= 1
+            new_neuron = neuron.Neuron(i, layer)
+            self.neurons.append(new_neuron)
+            self.neuron_layer_dict[layer].append(new_neuron)
+        print([len(x) for x in self.neuron_layer_dict.values()])
 
-    def populate_neuron_connections(self, n):
+    def try_get_layer_connection(self, layer):
+        probability = random.random()
+        # adjusted_layer_fixed_probs = {x:y for x,y in self.layer_fixed_conn_probs.items() if '->' not in x or x[0] == layer}
+        adjusted_layer_fixed_probs = self.layer_fixed_conn_probs
+        # for x in self.layer_fixed_conn_probs:
+        #     if '->' not in x:
+        #         adjusted_layer_fixed_probs.append(x)
+        #     elif :
+        #         adjusted_layer_fixed_probs.append(x)
+        # print(adjusted_layer_fixed_probs)
+        # if layer == '2':
+        #     print('')
+        try_layer_connection = random.randint(0, len(adjusted_layer_fixed_probs.keys()) - 1)
+        connection_layer = list(adjusted_layer_fixed_probs.keys())[try_layer_connection]
+        # print(layer, connection_layer)
+        if '->' in connection_layer:
+            if connection_layer[0] == layer:
+                if probability < try_layer_connection:
+                    # print(f'returning {connection_layer.split("->")[-1]}')
+                    return connection_layer.split('->')[-1]
+        else:
+            if probability < try_layer_connection:
+                # print(f'returning {connection_layer}')
+                return connection_layer
+        #return self.try_get_layer_connection(layer)
+
+    def populate_neuron_connections(self, n, layer):
         """
         Gives each neuron the connections given the constants provided
         :param n: the neuron to add the connections to
@@ -40,17 +76,22 @@ class MapModel:
         # We don't want to connect to ourselves
         neurons_wo = list(self.neurons)
         neurons_wo.remove(n)
-
-        # We want to choose a random selection of k neurons, where k is eg 10% of all neurons
-        for connection in random.choices(neurons_wo, k=round(len(self.neurons) * self.fixed_connectivity_probability)):
-            # There is an 80% chance that each connection is excitatory, 20% inhibitory
-            if random.random() < self.excitatory_probability:
+        number_of_connections = round(len(self.neurons)*0.10)
+        for i in range(number_of_connections):
+            layer_to_connect_to = self.try_get_layer_connection(layer)
+            if layer_to_connect_to is None:
+                continue
+            # print(layer_to_connect_to)
+            random_index = random.randint(0, len(self.neuron_layer_dict.values())-1)
+            connecting_neuron = self.neuron_layer_dict[layer_to_connect_to][random_index]
+            # We are now connecting to a neuron in this chosen layer
+            if random.random() < self.layer_excitatory_probs[layer]:
                 connection_type = neuron.NeuronType.EXCITATORY
             else:
                 connection_type = neuron.NeuronType.INHIBITORY
-            # Setting the connection type for each connection
-            forward_connections[connection] = connection_type
-        # Setting the forward connections of each neuron
+            forward_connections[connecting_neuron] = connection_type
+            # if n.number_identifier == 0:
+            #     print(f'Adding forward connection of type {connection_type} to {connecting_neuron.number_identifier} from {n.number_identifier}')
         n.forward_connections = forward_connections
 
     def propagate(self):
@@ -59,12 +100,17 @@ class MapModel:
         self.populate_neurons()
 
         # Gives each neuron the connections given the constants provided
-        for i in range(self.total_neuron_count):
-            n = self.neurons[i]
-            self.populate_neuron_connections(n)
-
+        for layer, neurons in self.neuron_layer_dict.items():
+            """
+            We want 10% connectivity with the whole population so 10% of total count and randomly choose from array??
+            """
+            for neuron in neurons:
+                self.populate_neuron_connections(neuron, layer)
+        neuron_start_index = random.randint(0, len(self.neurons)-1)
+        print(f"going to start propagation with index {neuron_start_index}")
         # Starts the propagation
-        activity_data_add = self.neurons[0].send_data_forward(runtime_ms=self.runtime_ms,
+        print(self.neurons[neuron_start_index].forward_connections)
+        activity_data_add = self.neurons[neuron_start_index].send_data_forward(runtime_ms=self.runtime_ms,
                                                               stored_data=self.stored_timestamps)
         self.activity_data += activity_data_add
 
@@ -82,6 +128,9 @@ class MapModel:
 
     def get_activity_axes(self):
         # Counting the number of times spikes occur for a unit of time
+
+        # For numerical we don't need these
+        self.activity_data = [x[0] for x in self.activity_data]
         activity_set = list(set(self.activity_data))
         activity_y = [0] * len(activity_set)
         for i, d in enumerate(self.activity_data):
