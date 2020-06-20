@@ -1,6 +1,7 @@
 from enum import Enum
 import random
 import sys
+import numpy as np
 # To stop any recursion limits from stopping the simulation from running at high neuron counts
 sys.setrecursionlimit(1000000)
 
@@ -10,8 +11,8 @@ class NeuronType(Enum):
     Enum that represents the different types of neuron connection with their respective probability of causing
      subsequent firings.
     """
-    EXCITATORY = 0.8
-    INHIBITORY = 0.2
+    EXCITATORY = 0.5
+    INHIBITORY = 0.05
 
 
 class Neuron:
@@ -71,10 +72,14 @@ class Neuron:
                 # We'll allow a connection if its connection propagation probability is good
                 # Sending the call for the connection's action potential
                 #random_time = random.random()
-                activity_data_add1, num_identifier = connection.get_data_behind(last_time=call_time, stored_data=stored_data)
-                activity_data.append([activity_data_add1, num_identifier])
+
                 # the connection type of this connection determines if we actually get anything back
-                if random.random() < connection_type.value:
+                val = random.random()
+                print(val < connection_type.value, val, connection_type.value)
+                if val < connection_type.value:
+                    activity_data_add1, num_identifier = connection.get_data_behind(last_time=call_time,
+                                                                                    stored_data=stored_data)
+                    activity_data.append([activity_data_add1, num_identifier])
                     # Propagating the signal on
                     # print(f'Propagating signal from {self.number_identifier} of layer {self.layer} to {connection.number_identifier} of layer {connection.layer}')
                     activity_data_add2 = connection.send_data_forward(runtime_ms, stored_data)

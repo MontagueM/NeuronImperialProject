@@ -232,8 +232,8 @@ class Neuron:
         run3, timestamps3 = self.run(30, 0)
         run2, timestamps2 = run2[200:], timestamps2[200:]
         activity_data = timestamps2[-1]
-        print(f"adding activity {activity_data} for neuron #{self.number_identifier}")
         # Sending data back for graph
         if self.number_identifier == -1:
             return timestamps1 + timestamps2
+        print(f"adding activity {activity_data} for neuron #{self.number_identifier}")
         return [[timestamps1 + timestamps2 + timestamps3, run1 + run2 + run3, self.number_identifier]], activity_data

@@ -2,6 +2,7 @@ import neuron_efficient as neuron
 import neuron as neuron_original
 import matplotlib.pyplot as plt
 import random
+import numpy as np
 
 
 class MapModel:
