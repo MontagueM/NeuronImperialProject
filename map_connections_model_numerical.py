@@ -40,6 +40,8 @@ class MapModel:
             self.neurons.append(new_neuron)
             self.neuron_layer_dict[layer].append(new_neuron)
         print([len(x) for x in self.neuron_layer_dict.values()])
+        print(len(self.neurons))
+
 
     def try_get_layer_connection(self, layer):
         adjusted_layer_fixed_probs = {x:y for x,y in self.layer_fixed_conn_probs.items() if x.split('->')[0] == layer}
@@ -69,17 +71,20 @@ class MapModel:
 
         for layer_exchange, f_percent in self.layer_fixed_conn_probs.items():
             if layer_exchange.split('->')[0] == layer:
-                for i in range(round(f_percent * len(self.neurons))):
+                # print(f'neuron {n.number_identifier} layerexc {layer_exchange} fperc {f_percent} no. {round(f_percent * len(self.neuron_layer_dict[layer]))}')
+                for i in range(round(f_percent * len(self.neuron_layer_dict[layer]))):
                     layer_to_connect_to = layer_exchange.split('->')[1]
-                    random_index = random.randint(0, len(self.neuron_layer_dict.values()) - 1)
+                    random_index = random.randint(0, len(self.neuron_layer_dict[layer_to_connect_to]) - 1)
                     connecting_neuron = self.neuron_layer_dict[layer_to_connect_to][random_index]
                     # We are now connecting to a neuron in this chosen layer
                     if random.random() < self.layer_excitatory_probs[layer]:
                         connection_type = neuron.NeuronType.EXCITATORY
                     else:
                         connection_type = neuron.NeuronType.INHIBITORY
+                    # print(connecting_neuron.number_identifier)
                     forward_connections[connecting_neuron] = connection_type
         n.forward_connections = forward_connections
+        # print(f'neuron {n.number_identifier} no. forward {len(n.forward_connections)}')
         ####
         # number_of_connections = round(len(self.neurons)*0.10)
         # for i in range(number_of_connections):
@@ -112,9 +117,10 @@ class MapModel:
         # neuron_start_index = random.randint(0, len(self.neurons)-1)
         neuron_start_index = 2500
         start_neuron = self.neurons[neuron_start_index]
-        print(f"going to start propagation with id {start_neuron.number_identifier} of layer{start_neuron.layer}")
+        print(f"going to start propagation with id {start_neuron.number_identifier} of layer {start_neuron.layer} and # of forward connections {len(start_neuron.forward_connections)}")
         # Starts the propagation
         print(self.neurons[neuron_start_index].forward_connections)
+        print(len(self.neurons))
         activity_data_add = start_neuron.send_data_forward(runtime_ms=self.runtime_ms,
                                                               stored_data=self.stored_timestamps)
         self.activity_data += activity_data_add
