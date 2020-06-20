@@ -76,7 +76,7 @@ class Neuron:
                 # the connection type of this connection determines if we actually get anything back
                 if random.random() < connection_type.value:
                     # Propagating the signal on
-                    print(f'Propagating signal from {self.number_identifier} of layer {self.layer} to {connection.number_identifier} of layer {connection.layer}')
+                    # print(f'Propagating signal from {self.number_identifier} of layer {self.layer} to {connection.number_identifier} of layer {connection.layer}')
                     activity_data_add2 = connection.send_data_forward(runtime_ms, stored_data)
                     activity_data += activity_data_add2
 
