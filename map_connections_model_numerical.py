@@ -42,12 +42,6 @@ class MapModel:
         print([len(x) for x in self.neuron_layer_dict.values()])
 
     def try_get_layer_connection(self, layer):
-        """
-        Don't do this
-        Add up all the probs in adjusted layer fixed probs and pick a random prob (0, maxprob) and take that prob
-        to be what "index" you should pick
-        """
-
         adjusted_layer_fixed_probs = {x:y for x,y in self.layer_fixed_conn_probs.items() if x.split('->')[0] == layer}
         sum_probs = sum(adjusted_layer_fixed_probs.values())
         probability = random.uniform(0, sum_probs)
@@ -61,18 +55,7 @@ class MapModel:
         if connection_layer == -1:
             print('dumb')
             quit()
-        # print(f'Prob {probability}')
-        # if layer == '6':
-        #     print('')
-        # try_layer_connection = random.randint(0, len(adjusted_layer_fixed_probs.keys()) - 1)
-        # connection_layer = list(adjusted_layer_fixed_probs.keys())[try_layer_connection]
-        # print(layer, connection_layer)
-        if '->' in connection_layer:
-            # print(f'returning {connection_layer.split("->")[-1]}')
-            return connection_layer.split('->')[-1]
-        else:
-            # print(f'returning {connection_layer}')
-            return connection_layer
+        return connection_layer.split('->')[-1]
 
     def populate_neuron_connections(self, n, layer):
         """
@@ -83,21 +66,36 @@ class MapModel:
         # We don't want to connect to ourselves
         neurons_wo = list(self.neurons)
         neurons_wo.remove(n)
-        number_of_connections = round(len(self.neurons)*0.10)
-        for i in range(number_of_connections):
-            layer_to_connect_to = self.try_get_layer_connection(layer)
-            # print(layer_to_connect_to)
-            random_index = random.randint(0, len(self.neuron_layer_dict.values())-1)
-            connecting_neuron = self.neuron_layer_dict[layer_to_connect_to][random_index]
-            # We are now connecting to a neuron in this chosen layer
-            if random.random() < self.layer_excitatory_probs[layer]:
-                connection_type = neuron.NeuronType.EXCITATORY
-            else:
-                connection_type = neuron.NeuronType.INHIBITORY
-            forward_connections[connecting_neuron] = connection_type
+
+        for layer_exchange, f_percent in self.layer_fixed_conn_probs.items():
+            if layer_exchange.split('->')[0] == layer:
+                for i in range(round(f_percent * len(self.neurons))):
+                    layer_to_connect_to = layer_exchange.split('->')[1]
+                    random_index = random.randint(0, len(self.neuron_layer_dict.values()) - 1)
+                    connecting_neuron = self.neuron_layer_dict[layer_to_connect_to][random_index]
+                    # We are now connecting to a neuron in this chosen layer
+                    if random.random() < self.layer_excitatory_probs[layer]:
+                        connection_type = neuron.NeuronType.EXCITATORY
+                    else:
+                        connection_type = neuron.NeuronType.INHIBITORY
+                    forward_connections[connecting_neuron] = connection_type
+        n.forward_connections = forward_connections
+        ####
+        # number_of_connections = round(len(self.neurons)*0.10)
+        # for i in range(number_of_connections):
+        #     layer_to_connect_to = self.try_get_layer_connection(layer)
+        #     # print(layer_to_connect_to)
+        #     random_index = random.randint(0, len(self.neuron_layer_dict.values())-1)
+        #     connecting_neuron = self.neuron_layer_dict[layer_to_connect_to][random_index]
+        #     # We are now connecting to a neuron in this chosen layer
+        #     if random.random() < self.layer_excitatory_probs[layer]:
+        #         connection_type = neuron.NeuronType.EXCITATORY
+        #     else:
+        #         connection_type = neuron.NeuronType.INHIBITORY
+        #     forward_connections[connecting_neuron] = connection_type
             # if n.number_identifier == 0:
             #     print(f'Adding forward connection of type {connection_type} to {connecting_neuron.number_identifier} from {n.number_identifier}')
-        n.forward_connections = forward_connections
+        # n.forward_connections = forward_connections
 
     def propagate(self):
         """ This code makes every neuron, assigns all connections, and starts signal propagation. """
